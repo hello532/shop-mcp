@@ -181,3 +181,5 @@ then returns `isError` with the missing variable named. A host that cannot read
 `tools/list` reports "broken server" and sends you looking in the wrong place.
 
 MIT.
+
+<!-- mcp-name: io.github.hello532/shop-mcp -->
