@@ -12,8 +12,10 @@ healthy from the inside and misbehaves only once an agent is talking to it.
 from __future__ import annotations
 
 import io
+import re
 import sys
 import json
+import pathlib
 from typing import Any
 
 import shop_mcp as S
@@ -369,7 +371,16 @@ def test_unconfigured_server_still_answers() -> None:
 
     r = srv.handle({"jsonrpc": "2.0", "id": 21, "method": "tools/list"})
     assert r is not None
-    eq(r["result"]["tools"], [], "an unconfigured server lists no tools rather than failing")
+    listed = [t["name"] for t in r["result"]["tools"]]
+    eq(
+        listed,
+        [t["name"] for t in S.Tools.descriptors()],
+        "an unconfigured server lists its FULL tool set, because the list is a constant",
+    )
+    ok(
+        len(listed) == 4,
+        "all four tools are visible before any store is configured",
+    )
 
     r = srv.handle(
         {
@@ -381,10 +392,118 @@ def test_unconfigured_server_still_answers() -> None:
     )
     assert r is not None
     ok(r["result"]["isError"] is True, "an unconfigured call fails as a result")
-    ok(
-        "SHOPIFY_SHOP" in r["result"]["content"][0]["text"],
-        "the message names the missing variable, so it is actionable",
+    text = r["result"]["content"][0]["text"]
+    # Whole-word, not a substring: "SHOPIFY_SHOP" also matches
+    # "SHOPIFY_SHOP_DOMAIN", so a substring test cannot tell the two apart and
+    # would stay green while the code read a variable no user is told to set.
+    named = set(re.findall(r"\bSHOPIFY_[A-Z_]+\b", text))
+    eq(
+        named,
+        {"SHOPIFY_SHOP_DOMAIN", "SHOPIFY_ADMIN_TOKEN"},
+        "the message names exactly the variables a user is documented to set",
     )
+
+
+def test_env_names_agree_with_docs() -> None:
+    """
+    The variables the CODE reads must be exactly the ones a user is TOLD to
+    export. Nothing else in this suite can see a disagreement: the server runs
+    fine under either name, every protocol assertion passes, and a user who
+    follows the docs gets a permanently unconfigured server whose only symptom
+    is that tools refuse to run.
+
+    The load-bearing comparison is against the module docstring, not README.md,
+    because the docstring travels inside shop_mcp.py: it is present when the
+    server is shipped alone in a bundle, and present in the mutation harness's
+    two-file copy. README.md is cross-checked only when it is there. A missing
+    README is a packaging fact, not a code defect, so it must not fail this
+    test - a spurious failure here would be reported as the catcher for every
+    unrelated mutation and would destroy attribution across the whole suite.
+
+    Both sides are read out of source, so the assertion cannot drift into
+    agreeing with itself.
+    """
+    here = pathlib.Path(S.__file__).resolve().parent
+    code = (here / "shop_mcp.py").read_text()
+    pat = r"\bSHOPIFY_[A-Z_]+\b"
+
+    # What the code actually READS from the environment, not what it mentions.
+    read_by_code = set(re.findall(r"os\.environ\.get\(\s*\"(SHOPIFY_[A-Z_]+)\"", code))
+    eq(
+        read_by_code,
+        {"SHOPIFY_SHOP_DOMAIN", "SHOPIFY_ADMIN_TOKEN"},
+        "the code reads exactly two environment variables",
+    )
+
+    # What the module docstring tells the user to set, minus internal constants.
+    in_docstring = set(re.findall(pat, S.__doc__ or "")) - {"SHOPIFY_API_VERSION"}
+    eq(
+        in_docstring,
+        read_by_code,
+        "the module docstring names exactly the variables the code reads",
+    )
+
+    readme_path = here / "README.md"
+    if readme_path.exists():
+        # Only the lines a user COPIES count as an instruction. Scanning the
+        # whole file also matches prose - this README discusses a past bug in
+        # which the code read the wrong name - and a document that explains a
+        # defect would then be indistinguishable from one that causes it.
+        told_to_export = set()
+        for line in readme_path.read_text().splitlines():
+            told_to_export.update(re.findall(r"^\s*(?:export\s+)?(SHOPIFY_[A-Z_]+)=", line))
+        told_to_export -= {"SHOPIFY_API_VERSION"}
+        eq(
+            told_to_export,
+            read_by_code,
+            "the variables README.md tells a user to export are the ones the code reads",
+        )
+
+
+def test_bundle_manifest_agrees_with_code() -> None:
+    """
+    manifest.json is the contract an MCP host reads before it ever runs the
+    server: it decides the command line, which environment variables get
+    injected, and what the store page claims the tools are. Nothing in the
+    server reads it, so a disagreement is invisible at runtime and shows up
+    only as an install that silently does not work.
+
+    It has already been wrong once in exactly that way: the manifest injected
+    SHOPIFY_SHOP_DOMAIN while the code read SHOPIFY_SHOP, and every assertion
+    in this suite passed.
+
+    Skipped, not failed, when the manifest is absent - the harness's two-file
+    copy has no manifest, and treating that as a defect would credit this
+    assertion for unrelated mutations.
+    """
+    here = pathlib.Path(S.__file__).resolve().parent
+    manifest_path = here / "manifest.json"
+    if not manifest_path.exists():
+        return
+
+    m = json.loads(manifest_path.read_text())
+    eq(m["name"], S.SERVER_NAME, "manifest name matches the server's own name")
+    eq(
+        m["version"],
+        S.SERVER_VERSION,
+        "manifest version matches serverInfo.version, which a host shows the user",
+    )
+    eq(
+        [t["name"] for t in m["tools"]],
+        [t["name"] for t in S.Tools.descriptors()],
+        "manifest tool list matches tools/list, in order",
+    )
+    injected = set(m["server"]["mcp_config"]["env"])
+    read_by_code = set(
+        re.findall(r"os\.environ\.get\(\s*\"(SHOPIFY_[A-Z_]+)\"", (here / "shop_mcp.py").read_text())
+    )
+    eq(
+        injected,
+        read_by_code,
+        "the variables the manifest injects are the ones the code reads",
+    )
+    entry = here / m["server"]["entry_point"].split("/")[-1]
+    ok(entry.exists(), f"the manifest entry point exists ({m['server']['entry_point']})")
 
 
 # --------------------------------------------------------------------------
@@ -909,6 +1028,8 @@ TESTS = [
     test_jsonrpc_errors,
     test_tool_errors_are_results,
     test_unconfigured_server_still_answers,
+    test_env_names_agree_with_docs,
+    test_bundle_manifest_agrees_with_code,
     test_tool_descriptors,
     test_search_products,
     test_get_product,

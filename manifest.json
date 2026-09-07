@@ -1,0 +1,82 @@
+{
+  "manifest_version": "0.4",
+  "name": "shop-mcp",
+  "display_name": "Shopify Catalogue & Stock (read-only)",
+  "version": "1.0.1",
+  "description": "Answer questions about a Shopify store's catalogue and stock. Read-only.",
+  "long_description": "A read-only Shopify Admin API server. Four tools: full-text product search, one product with every variant's SKU/price/stock, per-location inventory (available / committed / on-hand), and a low-stock report sorted by shortfall. No write operation exists in the code. Single file, Python standard library only - no MCP SDK and no GraphQL client, so there is nothing to install. The bundle ships its own test suite: run 'python3 server/shop_mcp.py --self-test' with no credentials and no network to see 184 assertions, and 'bash server/mutation_test.sh' to see 20 known defects injected into copies of the source and each caught by a named assertion.",
+  "author": {
+    "name": "hello532",
+    "url": "https://github.com/hello532"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hello532/shop-mcp"
+  },
+  "license": "MIT",
+  "keywords": [
+    "shopify",
+    "e-commerce",
+    "inventory",
+    "catalogue",
+    "read-only",
+    "stdlib"
+  ],
+  "server": {
+    "type": "python",
+    "entry_point": "server/shop_mcp.py",
+    "mcp_config": {
+      "command": "python3",
+      "args": [
+        "${__dirname}/server/shop_mcp.py"
+      ],
+      "env": {
+        "SHOPIFY_SHOP_DOMAIN": "${user_config.shop_domain}",
+        "SHOPIFY_ADMIN_TOKEN": "${user_config.admin_token}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "search_products",
+      "description": "Find products in the store by free text, vendor, or status."
+    },
+    {
+      "name": "get_product",
+      "description": "Read one product in full, including every variant with its SKU, price and stock level."
+    },
+    {
+      "name": "check_inventory",
+      "description": "Stock for a SKU broken down by location, with available, committed and on-hand counts."
+    },
+    {
+      "name": "low_stock_report",
+      "description": "Variants at or below a stock threshold, lowest first."
+    }
+  ],
+  "user_config": {
+    "shop_domain": {
+      "type": "string",
+      "title": "Shop domain",
+      "description": "Your myshopify.com domain, e.g. your-shop.myshopify.com",
+      "required": true
+    },
+    "admin_token": {
+      "type": "string",
+      "title": "Admin API access token",
+      "description": "A Shopify Admin API token. Read scopes are enough: read_products and read_inventory.",
+      "required": true,
+      "sensitive": true
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.9.0 <4"
+    }
+  }
+}

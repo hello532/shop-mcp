@@ -9,7 +9,7 @@ install.
 
 ```
 $ python3 shop_mcp.py --self-test
-all green: 180 assertions
+all green: 189 assertions
 ```
 
 That command needs no credentials and no network. It is the point of the repo:
@@ -78,7 +78,7 @@ grow.
 
 ## Verified, and not verified
 
-**Verified, by the self-test, on every run:** 180 assertions covering the
+**Verified, by the self-test, on every run:** 189 assertions covering the
 handshake, framing, notification handling, id presence, error mapping, schema
 strictness, retry and backoff policy, SKU quoting, null-quantity handling,
 threshold boundaries, and scan exhaustion. Wire shapes were taken from the
@@ -122,7 +122,34 @@ disabled it raised, aborting the test before that assertion ran. Fixed with
 `a 200-with-THROTTLED is survivable, not a hard failure: raised ShopifyError:
 Throttled [THROTTLED]`, naming the rule and keeping the cause.
 
-All 17 mutations are now caught by an assertion that says what broke.
+Three more defects surfaced only when the server was packaged as an `.mcpb`
+bundle and launched the way a host launches it, which no test had ever done:
+
+1. The code read `SHOPIFY_SHOP`; this README and the bundle manifest both told
+   users to export `SHOPIFY_SHOP_DOMAIN`. Anyone following the docs got a
+   permanently unconfigured server. Every one of the 180 assertions passed,
+   because none of them compared the code against the docs.
+2. `tools/list` returned `[]` until credentials existed, so a host saw an empty
+   server and reported it broken — and the readable *no store is configured*
+   message on `tools/call` was unreachable, since nothing was listed to call.
+   The docstring above that code stated the opposite requirement, and the test
+   below it asserted the defect: `eq(tools, [], ...)`. The list never depended
+   on credentials; `descriptors()` touched no instance state at all, and is now
+   a `staticmethod`.
+3. `--self-test` was advertised in the module docstring but crashed inside the
+   bundle, which shipped only the server file. The bundle now ships the suite.
+
+The first fix then broke the harness in a way worth recording. The new
+assertion failed when `README.md` was absent, and the harness copied only two
+files, so it fired inside *every* mutant. The run still printed `17 caught`,
+but six of those were credited to `README.md is present` instead of their own
+labels: six real assertions could have been dead with the suite still green.
+A missing README is a packaging fact, not a code defect. The load-bearing
+comparison now runs against the module docstring, which travels with the
+source, and the harness copies the README so the cross-check is real.
+
+All 23 mutations are caught by an assertion that names what broke, and each is
+credited to its own label.
 
 ## Use it
 

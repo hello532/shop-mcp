@@ -44,7 +44,12 @@ run_mutation() {
     return
   }
 
-  if ! cp "$SRC/shop_mcp.py" "$SRC/self_test.py" "$work/"; then
+  # README.md and manifest.json travel too. Each is cross-checked against the
+  # code by an assertion that can only run if the file is here; without them
+  # those checks are silently absent from every mutant, and a defect they are
+  # the only witness to would be credited to some unrelated assertion.
+  if ! cp "$SRC/shop_mcp.py" "$SRC/self_test.py" "$SRC/README.md" \
+          "$SRC/manifest.json" "$work/"; then
     echo "  SETUP FAILED  ${COUNT}. $label  (cp)"
     MISS=$((MISS + 1)); MISSES+=("$label (cp failed)")
     rm -rf "$work"; return
@@ -219,6 +224,48 @@ run_mutation "scan_exhausted is hardcoded False" shop_mcp.py \
 run_mutation "a tool is removed from the dispatch table" shop_mcp.py \
   "is a known tool in the dispatcher" \
   's = s.replace(""" "low_stock_report": self.low_stock_report,""", """ """)'
+
+# 18. The env-var name the code reads drifts away from the name the docs tell
+#     a user to export. Every protocol assertion still passes and the server
+#     starts fine; the only symptom is that a user who followed the README has
+#     a permanently unconfigured store.
+run_mutation "code reads an env var the docs never mention" shop_mcp.py \
+  "the code reads exactly two environment variables" \
+  's = s.replace("""os.environ.get("SHOPIFY_SHOP_DOMAIN", "")""", """os.environ.get("SHOPIFY_SHOP", "")""")'
+
+# 19. Hiding the tool list until credentials exist. A host reads tools/list at
+#     launch, sees an empty server, and reports it as broken - so the readable
+#     "no store is configured" message on tools/call is never reached, because
+#     nothing is listed to call.
+run_mutation "unconfigured server hides its tools" shop_mcp.py \
+  "lists its FULL tool set" \
+  's = s.replace("""        return {"tools": Tools.descriptors()}""", """        return {"tools": [] if self.tools is None else Tools.descriptors()}""")'
+
+# 20. Dropping the variable names from the not-configured message. The failure
+#     is still reported, but the operator is not told what to set.
+run_mutation "not-configured message stops naming the variables" shop_mcp.py \
+  "names exactly the variables" \
+  's = s.replace(""""no store is configured; set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN\"""", """"no store is configured\"""")'
+
+# 21. The bundle manifest's version drifts from the server's. A host shows the
+#     manifest number on the install page and the code reports the other one in
+#     initialize, so a bug report names a version that was never built.
+run_mutation "manifest version drifts from the code" manifest.json \
+  "manifest version matches serverInfo.version" \
+  's = s.replace("""  "version": "1.0.1",""", """  "version": "9.9.9",""", 1)'
+
+# 22. The manifest injects a variable the code does not read. This is the exact
+#     defect that shipped: nothing fails at runtime, the server simply never
+#     sees a store and every tool call answers "no store is configured".
+run_mutation "manifest injects an env var the code never reads" manifest.json \
+  "the variables the manifest injects are the ones the code reads" \
+  's = s.replace(""""SHOPIFY_SHOP_DOMAIN": "${user_config.shop_domain}\"""", """"SHOPIFY_SHOP": "${user_config.shop_domain}\"""")'
+
+# 23. A tool advertised in the manifest that tools/list does not return. The
+#     store page promises a capability the installed server does not have.
+run_mutation "manifest advertises a tool the server does not serve" manifest.json \
+  "manifest tool list matches tools/list" \
+  's = s.replace(""""name": "low_stock_report\"""", """"name": "restock_now\"""", 1)'
 
 echo
 echo "=== Result ==="

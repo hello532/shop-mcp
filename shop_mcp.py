@@ -11,7 +11,7 @@ them live in code an SDK hides. They are enumerated in README.md and each one
 has an assertion in --self-test.
 
 Run:
-    SHOPIFY_SHOP=your-shop.myshopify.com \
+    SHOPIFY_SHOP_DOMAIN=your-shop.myshopify.com \
     SHOPIFY_ADMIN_TOKEN=shpat_... \
     python3 shop_mcp.py
 
@@ -35,7 +35,7 @@ from typing import Any, Callable
 # --------------------------------------------------------------------------
 
 SERVER_NAME = "shop-mcp"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.0.1"
 
 # The newest revision this server implements.
 LATEST_PROTOCOL_VERSION = "2025-11-25"
@@ -110,7 +110,7 @@ class ShopifyClient:
         sleeper: Callable[[float], None] | None = None,
     ) -> None:
         if not shop:
-            raise ConfigError("SHOPIFY_SHOP is not set (expected your-shop.myshopify.com)")
+            raise ConfigError("SHOPIFY_SHOP_DOMAIN is not set (expected your-shop.myshopify.com)")
         if not token:
             raise ConfigError("SHOPIFY_ADMIN_TOKEN is not set")
         self.shop = shop.strip().removeprefix("https://").removeprefix("http://").rstrip("/")
@@ -378,9 +378,16 @@ class Tools:
 
     # -- descriptors ----------------------------------------------------
 
-    def descriptors(self) -> list[dict[str, Any]]:
+    @staticmethod
+    def descriptors() -> list[dict[str, Any]]:
         """
         The tools/list payload.
+
+        Static on purpose: the tool list is a constant, so a host can read it
+        before any store is configured. Gating it on credentials would make an
+        unconfigured server look like a server with no tools, and the readable
+        "no store is configured" message in tools/call would never be reached
+        because nothing would be listed to call.
 
         Descriptions are written for the model, not for a human reading docs:
         they say when to reach for the tool and what it costs, because that is
@@ -785,9 +792,10 @@ class Server:
         }
 
     def _tools_list(self) -> dict[str, Any]:
-        if self.tools is None:
-            return {"tools": []}
-        return {"tools": self.tools.descriptors()}
+        # Unconditional: see Tools.descriptors. An unconfigured server still
+        # lists its tools, and the failure surfaces on call with a message
+        # naming the variables to set.
+        return {"tools": Tools.descriptors()}
 
     def _tools_call(self, params: dict[str, Any]) -> dict[str, Any]:
         name = params.get("name")
@@ -798,7 +806,9 @@ class Server:
             raise ValueError("arguments must be an object")
 
         if self.tools is None:
-            return self._tool_failure("no store is configured; set SHOPIFY_SHOP and SHOPIFY_ADMIN_TOKEN")
+            return self._tool_failure(
+                "no store is configured; set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN"
+            )
 
         try:
             payload = self.tools.call(name, args)
@@ -889,10 +899,10 @@ def build_tools() -> Tools | None:
     Dying at startup shows up as an opaque transport failure; staying up and
     failing each call with a readable message is diagnosable.
     """
-    shop = os.environ.get("SHOPIFY_SHOP", "")
+    shop = os.environ.get("SHOPIFY_SHOP_DOMAIN", "")
     token = os.environ.get("SHOPIFY_ADMIN_TOKEN", "")
     if not shop or not token:
-        log("SHOPIFY_SHOP / SHOPIFY_ADMIN_TOKEN are not both set; tools will refuse to run")
+        log("SHOPIFY_SHOP_DOMAIN / SHOPIFY_ADMIN_TOKEN are not both set; tools will refuse to run")
         return None
     try:
         return Tools(ShopifyClient(shop, token))
