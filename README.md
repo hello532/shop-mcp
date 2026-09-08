@@ -168,10 +168,12 @@ credited to its own label.
 
 ## Use it
 
+Installed from PyPI — nothing to clone:
+
 ```bash
 export SHOPIFY_SHOP_DOMAIN=your-shop.myshopify.com
 export SHOPIFY_ADMIN_TOKEN=shpat_...          # read_products, read_inventory
-python3 shop_mcp.py
+uvx shop-mcp                                  # or: pip install shop-mcp && shop-mcp
 ```
 
 Claude Desktop / any MCP host:
@@ -180,8 +182,8 @@ Claude Desktop / any MCP host:
 {
   "mcpServers": {
     "shop": {
-      "command": "python3",
-      "args": ["/absolute/path/to/shop_mcp.py"],
+      "command": "uvx",
+      "args": ["shop-mcp"],
       "env": {
         "SHOPIFY_SHOP_DOMAIN": "your-shop.myshopify.com",
         "SHOPIFY_ADMIN_TOKEN": "shpat_..."
@@ -189,6 +191,19 @@ Claude Desktop / any MCP host:
     }
   }
 }
+```
+
+From a clone instead, when you want to read the source before running it — which
+is the point of a single dependency-free file, and the only way to get the full
+189-assertion suite:
+
+```bash
+python3 shop_mcp.py --self-test    # 189 here, 183 installed; see above
+python3 shop_mcp.py
+```
+
+```json
+{ "command": "python3", "args": ["/absolute/path/to/shop_mcp.py"] }
 ```
 
 With no credentials set it still completes a handshake and serves `tools/list`,
