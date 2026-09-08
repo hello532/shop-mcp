@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.hello532/shop-mcp",
+  "description": "Read-only Shopify catalogue and stock for LLM agents. Stdlib only, no dependencies.",
+  "repository": {
+    "url": "https://github.com/hello532/shop-mcp",
+    "source": "github"
+  },
+  "version": "1.0.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "shop-mcp",
+      "version": "1.0.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SHOPIFY_SHOP_DOMAIN",
+          "description": "Your store domain, e.g. your-shop.myshopify.com",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SHOPIFY_ADMIN_TOKEN",
+          "description": "Shopify Admin API access token (shpat_...) with read_products and read_inventory scopes",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

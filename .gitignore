@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .venv/
 *.log
+
+# Build artefacts from `python -m build` / setuptools
+dist/
+build/
+*.egg-info/
+.DS_Store

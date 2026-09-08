@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shop-mcp"
+version = "1.0.1"
+description = "Read-only Shopify catalogue and stock MCP server. Standard library only - no MCP SDK, no GraphQL client."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Cun Hu", email = "coolun.337@gmail.com" }]
+keywords = ["mcp", "model-context-protocol", "shopify", "inventory", "ecommerce"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Office/Business",
+  "Topic :: Software Development :: Libraries",
+  "Typing :: Typed",
+]
+# No runtime dependencies, and that is the product claim: the server speaks
+# JSON-RPC and the Shopify Admin API with nothing but the standard library.
+# Adding one here would falsify README.md, which the self-test reads.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/hello532/shop-mcp"
+Source = "https://github.com/hello532/shop-mcp"
+Issues = "https://github.com/hello532/shop-mcp/issues"
+
+[project.scripts]
+shop-mcp = "shop_mcp:main"
+
+[tool.setuptools]
+# Two flat modules, not a package. self_test is SHIPPED on purpose: `shop-mcp
+# --self-test` imports it, and that command is the product's evidence. Dropping
+# it here would leave the installed CLI with a subcommand that raises
+# ModuleNotFoundError.
+py-modules = ["shop_mcp", "self_test"]
+
+# manifest.json is deliberately NOT packaged. Its entry_point is the DXT bundle
+# path server/shop_mcp.py, which does not exist in site-packages, so shipping it
+# would make test_bundle_manifest_agrees_with_code fail on a correct install.
+# The assertion skips when the file is absent, which is the accurate outcome for
+# a pip install.

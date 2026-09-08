@@ -16,6 +16,21 @@ That command needs no credentials and no network. It is the point of the repo:
 the protocol layer and the tool layer are both exercised for real, because the
 Shopify transport is replaced at a seam rather than mocked at the boundary.
 
+Installed from PyPI, the same command reports **183**, and the six-assertion
+difference is a packaging fact rather than a weaker check:
+
+```
+$ uvx --from shop-mcp shop-mcp --self-test
+all green: 183 assertions
+```
+
+`manifest.json` (5 assertions) and `README.md` (1) are deliberately not shipped
+into `site-packages` — the manifest's `entry_point` names a bundle path that
+does not exist in an installed copy, so packaging it would make a correct
+install fail. Both assertions *skip* rather than fail when their file is absent,
+which is why the count moves and the verdict does not. Clone the repo to run all
+189.
+
 ## Why write the protocol by hand
 
 Because the failure modes of a stdio MCP server are all invisible locally and
