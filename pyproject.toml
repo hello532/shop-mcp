@@ -32,6 +32,8 @@ dependencies = []
 Homepage = "https://github.com/hello532/shop-mcp"
 Source = "https://github.com/hello532/shop-mcp"
 Issues = "https://github.com/hello532/shop-mcp/issues"
+# Takes effect on PyPI only at the next upload; 1.0.1's metadata is frozen.
+"Custom builds" = "https://hello532.github.io/services.html"
 
 [project.scripts]
 shop-mcp = "shop_mcp:main"

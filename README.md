@@ -210,6 +210,15 @@ With no credentials set it still completes a handshake and serves `tools/list`,
 then returns `isError` with the missing variable named. A host that cannot read
 `tools/list` reports "broken server" and sends you looking in the wrong place.
 
+## If you want one of these for your own data
+
+This server is the worked example, not a product line. I build the same shape —
+a stdio MCP server over whatever you already have, with a self-test suite and
+proof that the suite catches injected defects — as a fixed-price job:
+[hello532.github.io/services.html](https://hello532.github.io/services.html),
+or coolun.337@gmail.com. Issues and PRs here are welcome either way; nothing on
+this page needs paying for.
+
 MIT.
 
 <!-- mcp-name: io.github.hello532/shop-mcp -->
