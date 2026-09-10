@@ -8,3 +8,7 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+
+# `bash build_mcpb.sh` output. Rebuilt from the tree on demand, byte-identical
+# each time, so there is nothing to gain from committing it.
+*.mcpb
