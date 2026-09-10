@@ -82,19 +82,27 @@ capabilities `{"tools":{"listChanged":false}}`.
 ## 5. Failure modes, and which one you are looking at
 
 The point of the design: **an unconfigured server still completes the handshake
-and still serves `tools/list`.** Only the tool call fails. So:
+and still serves `tools/list`.** Only the tool call fails. Every row below is a
+real run on this machine, not a reading of the source.
 
 | What you see | What it means | What to do |
 |---|---|---|
 | `all green: 183 assertions` | install is fine | move on |
-| handshake OK, `tools/list` returns 4 tools, `tools/call` returns `isError: true` | server fine, credentials wrong or missing | fix the two env vars |
-| `Error: Shopify: Shopify rejected the token (401). Check SHOPIFY_ADMIN_TOKEN and that the app has the scopes this tool needs.` | token invalid, revoked, or missing scopes | regenerate the token with `read_products` + `read_inventory` |
-| exit code `2` before any handshake | configuration error, message names the variable | set it |
+| stderr `SHOPIFY_SHOP_DOMAIN / SHOPIFY_ADMIN_TOKEN are not both set; tools will refuse to run`, then handshake OK and `tools/list` returns 4 | neither variable reached the process | set both in the MCP config's `env`, not just your shell |
+| `tools/call` → `Error: no store is configured; set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN` | same cause, seen from the call side | as above |
+| `tools/call` → `Error: Shopify: Shopify rejected the token (401). Check SHOPIFY_ADMIN_TOKEN and that the app has the scopes this tool needs.` | the variables arrived; the token is invalid, revoked, or lacks scopes | regenerate with `read_products` + `read_inventory` |
+| exit code `2`, stderr `unknown option: --nope (try --help)` | a bad CLI flag — the **only** thing that exits 2 | fix `args` in the config |
 | no `tools/list` response at all | transport problem — wrong command, `uvx` not on PATH | re-run step 1 |
 
+Two things this server deliberately does **not** do, so do not wait for them:
+it never exits non-zero for missing credentials (that path logs one line and
+serves anyway, exit `0`), and it does not validate the domain's shape at
+startup — a malformed `SHOPIFY_SHOP_DOMAIN` surfaces on the first call, not at
+launch.
+
 Do not report "broken server" when `tools/call` returns `isError`. That path is
-deliberate: the error text names the variable to set, which is why `tools/list`
-is served unconditionally.
+deliberate: the error text names what to fix, which is why `tools/list` is
+served unconditionally.
 
 ## 6. Protocol versions
 
