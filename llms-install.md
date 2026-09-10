@@ -17,9 +17,10 @@ all green: 183 assertions
 ```
 
 Exit code `0`. If you get this, the package installs and runs on this machine
-and you can stop debugging the transport. (A clone of the repo reports `189`;
-the six-assertion difference is `manifest.json` and `README.md` not being
-shipped into `site-packages`, and those assertions skip rather than fail.)
+and you can stop debugging the transport. (A clone of the repo reports `200`;
+the seventeen-assertion difference is `manifest.json`, `llms-install.md` and
+`README.md` not being shipped into `site-packages`, and those assertions skip
+rather than fail.)
 
 If `uvx` is missing, either is fine:
 

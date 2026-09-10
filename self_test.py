@@ -1099,12 +1099,64 @@ TESTS = [
 ]
 
 
+def _check_documented_count() -> None:
+    """
+    The counts printed in README.md and llms-install.md go stale every time a
+    test is added, and no assertion can see it: the true total does not exist
+    until every test has run, which is why this lives in the runner and not in
+    TESTS.
+
+    It has gone stale once already. Adding test_install_doc_quotes_real_strings
+    moved the clone total from 189 to 200 and left both documents quoting 189 --
+    the same defect the new test was written to prevent, one level up.
+
+    Only counts written as a present-tense claim are checked, and each pattern
+    names the sentence shape it owns. Scanning for bare three-digit numbers is
+    wrong for the reason test_env_names_agree_with_docs already records: this
+    README narrates a past bug in which "180 assertions passed", and a document
+    that explains a defect must not read the same as one that commits it.
+
+    Only the clone number is checked. The installed number cannot be verified
+    from inside a clone, and both documents are absent in an installed copy
+    anyway, so this is silent there.
+
+    This function must never call ok() or eq(). The number it validates is the
+    number the suite prints, so an assertion here would raise the total it is
+    checking against -- and, run per file, would check the second document
+    against a different total than the first. It appends to FAILED directly.
+    """
+    present_tense = (
+        r"all green: (\d+) assertions",  # quoted output of a real run
+        r"run all (\d+)\.",  # "Clone the repo to run all N."
+        r"the full\s+(\d+)-assertion suite",  # install section
+        r"# (\d+) here, \d+ installed",  # the command comment
+        r"on every run:\*\* (\d+) assertions",  # the verified/not-verified table
+        r"repo reports `(\d+)`",  # llms-install's clone aside
+    )
+    here = pathlib.Path(S.__file__).resolve().parent
+    total = PASSED  # snapshot: this function must not change PASSED
+    for name in ("README.md", "llms-install.md"):
+        p = here / name
+        if not p.exists():
+            continue
+        text = p.read_text()
+        claimed = {int(n) for pat in present_tense for n in re.findall(pat, text)}
+        # 183 is the installed count: a different, deliberate number.
+        for n in sorted(claimed - {183}):
+            if n != total:
+                FAILED.append(f"{name} claims {n} assertions, this clone runs {total}")
+        if not claimed:
+            FAILED.append(f"{name} states no assertion count this gate can read")
+
+
 def run_self_test() -> int:
     for t in TESTS:
         try:
             t()
         except Exception as exc:  # noqa: BLE001
             FAILED.append(f"{t.__name__} raised {type(exc).__name__}: {exc}")
+
+    _check_documented_count()
 
     if FAILED:
         print(f"FAILED: {len(FAILED)}", file=sys.stderr)

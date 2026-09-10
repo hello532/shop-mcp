@@ -9,14 +9,14 @@ install.
 
 ```
 $ python3 shop_mcp.py --self-test
-all green: 189 assertions
+all green: 200 assertions
 ```
 
 That command needs no credentials and no network. It is the point of the repo:
 the protocol layer and the tool layer are both exercised for real, because the
 Shopify transport is replaced at a seam rather than mocked at the boundary.
 
-Installed from PyPI, the same command reports **183**, and the six-assertion
+Installed from PyPI, the same command reports **183**, and the seventeen-assertion
 difference is a packaging fact rather than a weaker check:
 
 ```
@@ -24,12 +24,12 @@ $ uvx --from shop-mcp shop-mcp --self-test
 all green: 183 assertions
 ```
 
-`manifest.json` (5 assertions) and `README.md` (1) are deliberately not shipped
-into `site-packages` — the manifest's `entry_point` names a bundle path that
-does not exist in an installed copy, so packaging it would make a correct
-install fail. Both assertions *skip* rather than fail when their file is absent,
-which is why the count moves and the verdict does not. Clone the repo to run all
-189.
+`manifest.json` (5 assertions), `llms-install.md` (11) and `README.md` (1) are
+deliberately not shipped into `site-packages` — the manifest's `entry_point`
+names a bundle path that does not exist in an installed copy, so packaging it
+would make a correct install fail. All three groups *skip* rather than fail when
+their file is absent, which is why the count moves and the verdict does not.
+Clone the repo to run all 200.
 
 This server is the worked example, not a product line. I build the same shape —
 a stdio MCP server over data you already have, with a self-test suite and proof
@@ -100,7 +100,7 @@ grow.
 
 ## Verified, and not verified
 
-**Verified, by the self-test, on every run:** 189 assertions covering the
+**Verified, by the self-test, on every run:** 200 assertions covering the
 handshake, framing, notification handling, id presence, error mapping, schema
 strictness, retry and backoff policy, SKU quoting, null-quantity handling,
 threshold boundaries, and scan exhaustion. Wire shapes were taken from the
@@ -202,10 +202,10 @@ Claude Desktop / any MCP host:
 
 From a clone instead, when you want to read the source before running it — which
 is the point of a single dependency-free file, and the only way to get the full
-189-assertion suite:
+200-assertion suite:
 
 ```bash
-python3 shop_mcp.py --self-test    # 189 here, 183 installed; see above
+python3 shop_mcp.py --self-test    # 200 here, 183 installed; see above
 python3 shop_mcp.py
 ```
 
