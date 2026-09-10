@@ -4,7 +4,7 @@
   "display_name": "Shopify Catalogue & Stock (read-only)",
   "version": "1.0.1",
   "description": "Answer questions about a Shopify store's catalogue and stock. Read-only.",
-  "long_description": "A read-only Shopify Admin API server. Four tools: full-text product search, one product with every variant's SKU/price/stock, per-location inventory (available / committed / on-hand), and a low-stock report sorted by shortfall. No write operation exists in the code. Single file, Python standard library only - no MCP SDK and no GraphQL client, so there is nothing to install. The bundle ships its own test suite: run 'python3 server/shop_mcp.py --self-test' with no credentials and no network to see 184 assertions, and 'bash server/mutation_test.sh' to see 20 known defects injected into copies of the source and each caught by a named assertion.",
+  "long_description": "A read-only Shopify Admin API server. Four tools: full-text product search, one product with every variant's SKU/price/stock, per-location inventory (available / committed / on-hand), and a low-stock report sorted by shortfall. No write operation exists in the code. Single file, Python standard library only - no MCP SDK and no GraphQL client, so there is nothing to install. The bundle ships its own test suite, and every file each check needs travels with it: run 'python3 shop_mcp.py --self-test' with no credentials and no network to see 189 assertions, and 'bash mutation_test.sh' to see 23 known defects injected into copies of the source and each caught by a named assertion.",
   "author": {
     "name": "hello532",
     "url": "https://github.com/hello532"
@@ -24,11 +24,11 @@
   ],
   "server": {
     "type": "python",
-    "entry_point": "server/shop_mcp.py",
+    "entry_point": "shop_mcp.py",
     "mcp_config": {
       "command": "python3",
       "args": [
-        "${__dirname}/server/shop_mcp.py"
+        "${__dirname}/shop_mcp.py"
       ],
       "env": {
         "SHOPIFY_SHOP_DOMAIN": "${user_config.shop_domain}",
