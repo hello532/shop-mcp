@@ -460,6 +460,62 @@ def test_env_names_agree_with_docs() -> None:
         )
 
 
+def test_install_doc_quotes_real_strings() -> None:
+    """
+    llms-install.md is the page an agent follows when it installs this server,
+    and it claims every string it shows was produced by a real run. That claim
+    is the whole value of the page and nothing else here can check it.
+
+    It has already been wrong in exactly the way that matters. The failure table
+    told the reader that missing credentials produce "exit code 2 before any
+    handshake". They do not: build_tools() logs one line, returns None, and the
+    server serves tools/list anyway, exiting 0. EXIT_CONFIG is reachable only
+    from the unknown-option branch. So the first symptom on the install path was
+    documented as something the process cannot do, and the reader who waited for
+    a non-zero exit would conclude the transport was broken.
+
+    Every assertion below reads both sides out of source, so the test cannot
+    drift into agreeing with itself. Skipped when the file is absent: it is not
+    shipped into site-packages, and a spurious failure here would be credited as
+    the catcher for unrelated mutations and destroy attribution.
+    """
+    here = pathlib.Path(S.__file__).resolve().parent
+    doc_path = here / "llms-install.md"
+    if not doc_path.exists():
+        return
+
+    doc = doc_path.read_text()
+    code = (here / "shop_mcp.py").read_text()
+
+    # Strings the document puts in the reader's hands as things they will see.
+    # If the code stops emitting one, the document is lying and this fails.
+    for quoted in (
+        "no store is configured; set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN",
+        "are not both set; tools will refuse to run",
+        "Shopify rejected the token (401)",
+        "unknown option:",
+    ):
+        ok(quoted in doc, f"llms-install.md quotes {quoted[:40]!r}")
+        ok(quoted in code, f"the code actually emits {quoted[:40]!r}")
+
+    # The defect that shipped: a documented exit code the credential path never
+    # produces. Assert the code's shape, not the prose, so the check survives
+    # any rewording of the document.
+    build = code[code.index("def build_tools(") : code.index("def main(")]
+    ok(
+        "EXIT_CONFIG" not in build,
+        "the credential path cannot exit with the config code",
+    )
+    ok(
+        "return None" in build,
+        "the credential path returns None and lets the server serve",
+    )
+    ok(
+        "before any handshake" not in doc,
+        "llms-install.md no longer claims a pre-handshake exit for missing credentials",
+    )
+
+
 def test_bundle_manifest_agrees_with_code() -> None:
     """
     manifest.json is the contract an MCP host reads before it ever runs the
@@ -1029,6 +1085,7 @@ TESTS = [
     test_tool_errors_are_results,
     test_unconfigured_server_still_answers,
     test_env_names_agree_with_docs,
+    test_install_doc_quotes_real_strings,
     test_bundle_manifest_agrees_with_code,
     test_tool_descriptors,
     test_search_products,
